@@ -56,8 +56,7 @@
             if (error.code === 20) {
               return;
             }
-            urls[url].number_of_errored_responses++;
-            urls[url].error_message = error.message;
+            urls[url].errors++;
           })
           .then((response) => {
             if (response && !response.ok) {
